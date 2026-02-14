@@ -160,6 +160,23 @@
         public string LoadedScene;
     }
 
+    // ── Interaction Events ──────────────────────────────────────────
+
+    /// <summary>
+    /// Fired when the player's raycast finds a valid interactable target.
+    /// UI should display the interaction prompt.
+    /// </summary>
+    public struct InteractionTargetFoundEvent : IGameEvent
+    {
+        public string Prompt;
+    }
+
+    /// <summary>
+    /// Fired when the player's raycast loses its interactable target.
+    /// UI should hide the interaction prompt.
+    /// </summary>
+    public struct InteractionTargetLostEvent : IGameEvent { }
+
     // ── Attribute and State Enums ───────────────────────────────────
 
     /// <summary>
