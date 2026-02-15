@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 using LightCone.Systems.Rest;
 using LightCone.Systems.Resources;
 
-namespace LightCone.Gameplay.Player 
+namespace LightCone.Gameplay.Player
 {
     /// <summary>
     /// Core movement event. Lives on the player's event stack permanently.
@@ -26,14 +26,20 @@ namespace LightCone.Gameplay.Player
         private InputAction moveAction;
         private InputAction lookAction;
         private InputAction sprintAction;
+        private InputAction crouchAction;
+        private InputAction jumpAction;
 
         private Vector2 moveInput;
         private Vector2 lookInput;
         private Vector3 velocity;
         private float verticalRotation;
+        private float currentHeight;
+        private float standingCameraY => playerDefinition.StandingHeight * 0.9f;
+
 
         //actions
         private bool sprintHeld;
+        private bool isCrouching = false; //init as false
 
         public PlayerMovementEvent(
             CharacterController characterController,
@@ -55,6 +61,8 @@ namespace LightCone.Gameplay.Player
             moveAction = playerMap.FindAction("Move");
             lookAction = playerMap.FindAction("Look");
             sprintAction = playerMap.FindAction("Sprint");
+            crouchAction = playerMap.FindAction("Crouch");
+            jumpAction = playerMap.FindAction("Jump");
         }
 
         public override void OnBegin(bool bFirstTime)
@@ -66,6 +74,8 @@ namespace LightCone.Gameplay.Player
             lookAction.canceled += OnLook;
             sprintAction.performed += OnSprint;
             sprintAction.canceled += OnSprint;
+            crouchAction.performed += OnCrouchPressed;
+            crouchAction.canceled += OnCrouchReleased;
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
@@ -78,6 +88,7 @@ namespace LightCone.Gameplay.Player
             ApplyLook();
             ApplyGravity(deltaTime);
             ApplyMovement(deltaTime);
+            ApplyCrouch(deltaTime);
 
             Debug.Log($"Stamina: {resourceController.GetValue(playerDefinition.StaminaResourceId):F1}");
         }
@@ -90,6 +101,8 @@ namespace LightCone.Gameplay.Player
             lookAction.canceled -= OnLook;
             sprintAction.performed -= OnSprint;
             sprintAction.canceled -= OnSprint;
+            crouchAction.performed -= OnCrouchPressed;
+            crouchAction.canceled -= OnCrouchReleased;
             playerMap.Disable();
         }
 
@@ -120,6 +133,27 @@ namespace LightCone.Gameplay.Player
             }
         }
 
+        private void OnCrouchPressed(InputAction.CallbackContext context)
+        {
+            isCrouching = true;
+
+            if (isCrouching)
+            {
+                Debug.Log("Crouch pressed");
+                Debug.Log("Is Crouiching: " + isCrouching);
+            }
+        }
+
+        private void OnCrouchReleased(InputAction.CallbackContext context)
+        {
+            isCrouching = false;
+            if (!isCrouching)
+            {
+                Debug.Log("Crouch released");
+                Debug.Log("Is Crouiching: " + isCrouching);
+            }
+        }
+
         private void ApplyLook()
         {
             float sensitivity = playerDefinition.LookSensitivity;
@@ -143,7 +177,7 @@ namespace LightCone.Gameplay.Player
 
         private void ApplyMovement(float deltaTime)
         {
-            float speed =  sprintHeld ? playerDefinition.WalkSpeed * playerDefinition.SprintMultiplier : playerDefinition.WalkSpeed;
+            float speed = sprintHeld ? playerDefinition.WalkSpeed * playerDefinition.SprintMultiplier : playerDefinition.WalkSpeed;
 
             float speedModifier = attributeSet.HasAttribute(AttributeType.MovementSpeed)
                     ? attributeSet.GetValue(AttributeType.MovementSpeed)
@@ -172,6 +206,48 @@ namespace LightCone.Gameplay.Player
                     );
                 }
             }
+        }
+
+        private void ApplyCrouch(float deltaTime)
+        {
+            float targetHeight = isCrouching
+                ? playerDefinition.CrouchHeight
+                : playerDefinition.StandingHeight;
+
+            if (Mathf.Approximately(currentHeight, targetHeight))
+            {
+                return;
+            }
+
+            // Check ceiling only when trying to stand up
+            if (!isCrouching && IsCeilingAbove())
+            {
+                isCrouching = true;
+                return;
+            }
+
+            currentHeight = Mathf.MoveTowards(
+                currentHeight,
+                targetHeight,
+                playerDefinition.CrouchTransitionSpeed * deltaTime
+            );
+
+            characterController.height = currentHeight;
+            characterController.center = new Vector3(0f, currentHeight * 0.5f, 0f);
+
+            float heightRatio = currentHeight / playerDefinition.StandingHeight;
+            cameraHolder.localPosition = new Vector3(
+                cameraHolder.localPosition.x,
+                standingCameraY * heightRatio,
+                cameraHolder.localPosition.z
+            );
+        }
+
+        private bool IsCeilingAbove()
+        {
+            float radius = characterController.radius * 0.8f;
+            Vector3 origin = playerTransform.position + Vector3.up * (characterController.height * 0.5f);
+            return Physics.SphereCast(origin, radius, Vector3.up, out _, playerDefinition.StandingHeight - characterController.height);
         }
     }
 }
