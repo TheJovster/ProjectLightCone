@@ -189,7 +189,7 @@ namespace LightCone.Gameplay.Player
             Vector3 finalMove = move * speed + Vector3.up * velocity.y;
             characterController.Move(finalMove * deltaTime);
 
-            if (sprintHeld && moveInput.y > 0.1f && characterController.isGrounded)
+            if (sprintHeld && moveInput.y > 0.1f && characterController.isGrounded && characterController.velocity.magnitude > 0.1f)
             {
                 bool hasStamina = resourceController.CanAfford(
                     playerDefinition.StaminaResourceId,

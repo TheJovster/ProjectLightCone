@@ -11,6 +11,8 @@ namespace LightCone.Gameplay.UI
     /// </summary>
     public sealed class DebugHUD : MonoBehaviour
     {
+        [SerializeField] private float xOffset = 10.0f;
+
         private float stamina;
         private float staminaMax;
         private float health;
@@ -74,7 +76,7 @@ namespace LightCone.Gameplay.UI
 
         private void DrawLabel(ref float y, float height, string text)
         {
-            GUI.Label(new Rect(10f, y, 400f, height), text, debugStyle);
+            GUI.Label(new Rect(xOffset, y, 400f, height), text, debugStyle);
             y += height;
         }
     }
