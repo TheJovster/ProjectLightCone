@@ -5,6 +5,8 @@ using LightCone.Core.SceneManagement;
 using LightCone.Core.Services;
 using LightCone.Core.StateMachine;
 using LightCone.Data.SceneManagement;
+using LightCone.Systems.Audio;
+using LightCone.Data.Audio;
 
 namespace LightCone.Core
 {
@@ -17,11 +19,13 @@ namespace LightCone.Core
     {
         [Header("Configuration")]
         [SerializeField] private SceneDefinitionSO sceneConfig;
+        [SerializeField] private AudioConfigSO audioConfig;
 
         private static GameBootstrapper instance;
         private GameStateMachine stateMachine;
         private SaveManager saveManager;
         private SceneLoader sceneLoader;
+            
 
         private void Awake()
         {
@@ -66,6 +70,13 @@ namespace LightCone.Core
             var serializer = new JsonSaveSerializer();
             saveManager = new SaveManager(serializer);
             ServiceLocator.Register<SaveManager>(saveManager);
+
+            //audio system
+            var audioGo = new GameObject("AudioService");
+            audioGo.transform.SetParent(transform);
+            var audioService = audioGo.AddComponent<AudioService>();
+            audioService.Initialize(audioConfig);
+            ServiceLocator.Register<IAudioService>(audioService);
 
             // Register game states
             RegisterStates();
